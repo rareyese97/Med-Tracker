@@ -1,56 +1,48 @@
-// src/server.js
-import "dotenv/config";
+// src/app.js
+
 import express from "express";
-import mongoose from "mongoose";
 import cors from "cors";
+import dotenv from "dotenv";
+import mongoose from "mongoose";
 
 import authRoutes from "./routes/auth.js";
 import medsRoutes from "./routes/meds.js";
+// …any other routes
+
+dotenv.config();
 
 const app = express();
 
-// ─── CORS ───────────────────────────────────────────────────────────────────────
-const corsOptions = {
-	origin: "http://localhost:3000",
-	credentials: true,
-	methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-	allowedHeaders: ["Content-Type", "Authorization"],
-};
-app.use(cors(corsOptions));
-
-// ─── BODY PARSING ───────────────────────────────────────────────────────────────
-app.use(express.json());
-
-// ─── DEBUG: LOG EVERY REQUEST ───────────────────────────────────────────────────
-app.use((req, res, next) => {
-	next();
-});
-
-// ─── HEALTH CHECK ───────────────────────────────────────────────────────────────
-app.get("/", (req, res) => {
-	res.send("Medicine Tracker API is running");
-});
-
-// ─── ROUTES ─────────────────────────────────────────────────────────────────────
-// Public auth
-app.use("/api/auth", authRoutes);
-app.use("/api/meds", medsRoutes);
-
-// ─── ENV VALIDATION ─────────────────────────────────────────────────────────────
-const { MONGO_URI, PORT = 5001 } = process.env;
-if (!MONGO_URI) {
-	console.error("❌  MONGO_URI is not defined in .env");
-	process.exit(1);
-}
-
-// ─── CONNECT & START ────────────────────────────────────────────────────────────
+// ─── CONNECT TO MONGODB ───────────────────────────────────────────────────────
 mongoose
-	.connect(MONGO_URI)
-	.then(() => {
-		app.listen(PORT, () => {
-		});
+	.connect(process.env.MONGO_URI, {
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
 	})
+	.then(() => console.log("✅ Connected to MongoDB"))
 	.catch((err) => {
-		console.error("❌  MongoDB connection error:", err);
+		console.error("❌ MongoDB connection error:", err);
 		process.exit(1);
 	});
+
+// ─── MIDDLEWARE ────────────────────────────────────────────────────────────────
+// Allow your frontend origin (set in .env as FRONTEND_URL) to call this API
+app.use(
+	cors({
+		origin: process.env.FRONTEND_URL,
+	})
+);
+app.use(express.json());
+
+// ─── ROUTES ───────────────────────────────────────────────────────────────────
+app.use("/api/auth", authRoutes);
+app.use("/api/meds", medsRoutes);
+// …mount other routers here
+
+// ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
+app.get("/health", (_req, res) => res.send("OK"));
+
+// ─── START SERVER ─────────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => {
+});

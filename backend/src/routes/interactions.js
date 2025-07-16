@@ -1,5 +1,6 @@
 // src/routes/interactions.js
 import express from "express";
+import fetch from "node-fetch"; // or global fetch in Node18+
 import Meds from "../models/Meds.js";
 import authMiddleware from "../middleware/auth.js";
 
@@ -12,73 +13,56 @@ router.get("/", authMiddleware, async (req, res) => {
 		return res.status(400).json({ message: "Missing date parameter" });
 	}
 
+	// 1) figure out weekday
+	const d = new Date(date);
+	if (isNaN(d.getTime())) {
+		return res.status(400).json({ message: "Invalid date" });
+	}
+	const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+
+	// 2) load meds for that user/day
+	const meds = await Meds.find({
+		user: req.user.id,
+		"schedule.days": dayName,
+	}).lean();
+	const cuis = meds
+		.map((m) => m.rxcui) // make sure each Med doc has an `rxcui` field!
+		.filter(Boolean)
+		.join("+");
+	if (!cuis) {
+		return res.json([]);
+	}
+
 	try {
-		// Determine weekday
-		const d = new Date(date);
-		if (isNaN(d.getTime())) {
-			return res.status(400).json({ message: "Invalid date" });
+		// 3) fetch the interaction list
+		const intUrl = `https://rxnav.nlm.nih.gov/REST/interaction/list.json?rxcuis=${cuis}`;
+		const intResp = await fetch(intUrl, { headers: { Accept: "application/json" } });
+		if (!intResp.ok) {
+			console.warn("interaction list returned", intResp.status);
+			return res.json([]);
 		}
-		const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+		const intJson = await intResp.json();
 
-		// Fetch user medications for that weekday
-		const meds = await Meds.find({ user: req.user.id, "schedule.days": dayName }).lean();
-		const names = meds.map((m) => m.name);
-
-		// Lookup RXCUI via RxNav approximateTerm
-		const rxcuiMap = {};
-		await Promise.all(
-			names.map(async (name) => {
-				try {
-					const url = `https://rxnav.nlm.nih.gov/REST/approximateTerm.json?term=${encodeURIComponent(
-						name
-					)}&maxEntries=1`;
-					const resp = await fetch(url);
-					if (!resp.ok) {
-						console.warn(`approximateTerm returned ${resp.status} for ${name}`);
-						return;
-					}
-					const json = await resp.json();
-					const candidate = json.approximateGroup?.candidate?.[0];
-					if (candidate && candidate.rxcui) {
-						rxcuiMap[name] = candidate.rxcui;
-					}
-				} catch (e) {
-					console.warn(`RXCUI lookup failed for ${name}`, e);
-				}
-			})
-		);
-
-		const cuis = Object.values(rxcuiMap);
-		if (!cuis.length) return res.json([]);
-		const rxcuis = cuis.join("+");
-
-		// // Call interaction API with ONCHigh source
-		// const intUrl = `https://rxnav.nlm.nih.gov/REST/interaction/list.json?rxcuis=${rxcuis}&sources=DrugBank`;
-		// const intResp = await fetch(intUrl);
-		// if (!intResp.ok) {
-		// 	console.warn(`interaction list returned ${intResp.status}`);
-		// 	return res.json([]);
-		// }
-		// const intJson = await intResp.json();
-
-		// Parse alerts
+		// 4) turn it into your Alert shape
 		const alerts = [];
-		(intJson.interactionTypeGroup || []).forEach((group) => {
-			(group.interactionType || []).forEach((type) => {
+		(intJson.fullInteractionTypeGroup || []).forEach((group) => {
+			(group.fullInteractionType || []).forEach((type) => {
 				(type.interactionPair || []).forEach((pair) => {
 					const drugs = pair.interactionConcept.map((c) => c.minConceptItem.name);
-					const id = drugs.map((d, i) => pair.interactionConcept[i].minConceptItem.rxcui).join("-");
+					const id = pair.interactionConcept.map((c) => c.minConceptItem.rxcui).join("-");
 					alerts.push({
 						id: `int-${id}`,
 						message: pair.description,
-						severity: (pair.severity || "unknown").toLowerCase(),
+						severity: pair.severity === "high" ? "high" : pair.severity === "moderate" ? "medium" : "low",
 						drugsInvolved: drugs,
+						recommendation: pair.interactionIndicatorText,
+						link: pair.interactionConcept[0].sourceConceptItem?.url,
 					});
 				});
 			});
 		});
 
-		return res.json(alerts);
+		res.json(alerts);
 	} catch (err) {
 		console.error("Error in interactions route:", err);
 		res.status(500).json({ message: err.message });

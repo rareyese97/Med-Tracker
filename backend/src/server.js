@@ -10,42 +10,48 @@ import interactionsRouter from "./routes/interactions.js";
 
 const app = express();
 
-// ─── CORS Middleware ───────────────────────────────────────────────────────────
-const corsOptions = {
-	origin: "http://localhost:3000", // your frontend origin
-	credentials: true,
-	methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-	allowedHeaders: ["Content-Type", "Authorization"],
-};
-app.use(cors(corsOptions));
+// ─── MIDDLEWARE ────────────────────────────────────────────────────────────────
+// Allow your frontend origin to hit this API
+app.use(
+	cors({
+		origin: process.env.FRONTEND_URL || "http://localhost:3000",
+		credentials: true,
+		methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+		allowedHeaders: ["Content-Type", "Authorization"],
+	})
+);
 
-// ─── JSON Body Parsing ─────────────────────────────────────────────────────────
+// Parse JSON bodies
 app.use(express.json());
 
-// ─── Health Check ─────────────────────────────────────────────────────────────
-app.get("/", (req, res) => res.send("Medicine Tracker API is running"));
+// Health check
+app.get("/", (_req, res) => res.send("Medicine Tracker API is running"));
 
-// ─── Mount Routes ──────────────────────────────────────────────────────────────
-app.use("/api/auth", authRoutes);
-app.use("/api/meds", medsRoutes);
-app.use("/api/interactions", interactionsRouter);
-
-// ─── Environment Validation ────────────────────────────────────────────────────
+// ─── ENV VALIDATION ─────────────────────────────────────────────────────────────
 const { MONGO_URI, PORT = 5001 } = process.env;
 if (!MONGO_URI) {
-	console.error("❌  MONGO_URI is not defined in .env");
+	console.error("❌  MONGO_URI is not defined in your environment");
 	process.exit(1);
 }
 
-// ─── Connect to MongoDB & Start Server ─────────────────────────────────────────
+// ─── CONNECT TO MONGODB & START SERVER ─────────────────────────────────────────
 mongoose
-	.connect(MONGO_URI)
+	.connect(MONGO_URI, {
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
+	})
 	.then(() => {
-		// Start Express
+
+		// Mount your authenticated routes only once DB is up
+		app.use("/api/auth", authRoutes);
+		app.use("/api/meds", medsRoutes);
+		app.use("/api/interactions", interactionsRouter);
+
+		// Start listening
 		app.listen(PORT, () => {
 		});
 
-		// Start the reminder cron job after DB is ready
+		// Kick off your cron job
 		import("./jobs/sendReminders.js");
 	})
 	.catch((err) => {
