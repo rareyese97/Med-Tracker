@@ -1,23 +1,27 @@
 #!/usr/bin/env node
 import mongoose from "mongoose";
 import Med from "../models/Meds.js";
-import { utcToZonedTime, format } from "date-fns-tz";
 import sgMail from "@sendgrid/mail";
+import { formatInTimeZone } from "date-fns-tz";
+
+const ZONE = "America/New_York";
 
 async function main() {
-	const now = utcToZonedTime(new Date(), "America/New_York");
-	const weekday = format(now, "EEE");
-	const timeKey = format(now, "HH:mm");
-	const todayKey = format(now, "yyyy-MM-dd");
+	// 1) Timezone‐aware keys
+	const now = new Date();
+	const weekday = formatInTimeZone(now, ZONE, "EEE");
+	const timeKey = formatInTimeZone(now, ZONE, "HH:mm");
+	const todayKey = formatInTimeZone(now, ZONE, "yyyy-MM-dd");
 
 	console.log(`[${new Date().toISOString()}] Querying for day=${weekday}, time=${timeKey}, today=${todayKey}`);
 
-	// Validate env
+	// 2) Validate env
 	for (const v of ["SENDGRID_API_KEY", "MONGO_URI", "FROM_EMAIL"]) {
 		if (!process.env[v]) throw new Error(`${v} is not defined`);
 	}
 	sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
+	// 3) Connect
 	await mongoose.connect(process.env.MONGO_URI);
 
 	let sentCount = 0;
@@ -35,8 +39,9 @@ async function main() {
 					to: med.user.email,
 					from: process.env.FROM_EMAIL,
 					subject: `⏰ Time to take your ${med.name}`,
-					text: `Hi ${med.user.firstName},\n\nIt's ${format(now, "h:mm a")} on ${format(
+					text: `Hi ${med.user.firstName},\n\nIt's ${formatInTimeZone(now, ZONE, "h:mm a")} on ${formatInTimeZone(
 						now,
+						ZONE,
 						"MMMM do"
 					)} — time for your ${med.name}.\n\n– Med-Tracker`,
 				});
