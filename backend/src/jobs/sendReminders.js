@@ -1,26 +1,24 @@
 // src/jobs/sendReminders.js
 
-// 1) Load env vars
-import path from "path";
-import dotenv from "dotenv";
-
-dotenv.config({ path: path.resolve(process.cwd(), ".env") });
-
 import cron from "node-cron";
 import Med from "../models/Meds.js";
 import User from "../models/User.js";
 import { format } from "date-fns";
 import sgMail from "@sendgrid/mail";
 
-// 2) Configure SendGrid
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
-if (!process.env.SENDGRID_API_KEY) {
+// 1) Grab SendGrid key from environment (as set in Render’s dashboard)
+const sendGridKey = process.env.SENDGRID_API_KEY;
+if (!sendGridKey) {
 	console.error("✖️  SENDGRID_API_KEY is missing—reminder emails will not send.");
+} else {
+	sgMail.setApiKey(sendGridKey);
+	console.log("✅ SendGrid configured, scheduling reminders…");
 }
 
-// 3) Schedule: run this every minute
+// 2) Schedule: run every minute
 cron.schedule("* * * * *", async () => {
+	console.log("🔔 Cron tick — looking for due meds…");
+
 	const now = new Date();
 	const todayKey = format(now, "yyyy-MM-dd");
 	const hour = now.getHours().toString().padStart(2, "0");
@@ -50,6 +48,7 @@ cron.schedule("* * * * *", async () => {
 
 		try {
 			await sgMail.send(msg);
+			console.log(`✉️  Sent reminder to ${user.email} for ${med.name}`);
 		} catch (err) {
 			console.error("❌ SendGrid error sending reminder:", err);
 		}
