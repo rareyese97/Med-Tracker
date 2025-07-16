@@ -1,4 +1,6 @@
+// src/app/dashboard/page.tsx
 "use client";
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
@@ -12,6 +14,9 @@ import TodayMedBarChart from "./components/TakenMedChart";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 
 export default function Dashboard() {
+	const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!;
+	const MEDS = `${API_BASE}/api/meds`;
+
 	const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 	const [addModalOpen, setAddModalOpen] = useState(false);
 	const [editModalOpen, setEditModalOpen] = useState(false);
@@ -23,79 +28,72 @@ export default function Dashboard() {
 	const [token, setToken] = useState<string>("");
 	const router = useRouter();
 	const menuRef = useRef<HTMLDivElement>(null);
-	const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL + "/api/meds";
 
 	const signOut = useCallback(() => {
 		if (typeof window !== "undefined") localStorage.removeItem("token");
 		router.replace("/");
 	}, [router]);
 
-	// Unified fetch: today’s meds + all meds
 	const fetchMeds = useCallback(
 		async (t: string) => {
+			const dateParam = format(selectedDate, "yyyy-MM-dd");
 			try {
-				const dateParam = format(selectedDate, "yyyy-MM-dd");
 				const [todayRes, allRes] = await Promise.all([
-					fetch(`${API_BASE}?date=${dateParam}`, {
+					fetch(`${MEDS}?date=${dateParam}`, {
 						headers: { Authorization: `Bearer ${t}` },
 					}),
-					fetch(API_BASE, {
+					fetch(MEDS, {
 						headers: { Authorization: `Bearer ${t}` },
 					}),
 				]);
 
 				if (todayRes.status === 401 || allRes.status === 401) {
-					signOut();
-					return;
+					return signOut();
 				}
 
-				if (!todayRes.ok) {
-					console.error("Fetching today's meds failed:", await todayRes.text());
-				} else {
-					setScheduledMeds(await todayRes.json());
-				}
+				if (todayRes.ok) setScheduledMeds(await todayRes.json());
+				else console.error("Today's meds failed:", await todayRes.text());
 
-				if (!allRes.ok) {
-					console.error("Fetching all meds failed:", await allRes.text());
-				} else {
-					setAllMeds(await allRes.json());
-				}
+				if (allRes.ok) setAllMeds(await allRes.json());
+				else console.error("All meds failed:", await allRes.text());
 			} catch (err) {
 				console.error("fetchMeds error:", err);
 			}
 		},
-		[selectedDate, signOut]
+		[selectedDate, MEDS, signOut]
 	);
 
+	// Get token & username from localStorage once
 	useEffect(() => {
-		if (typeof window === "undefined") return;
-		const storedToken = localStorage.getItem("token");
-		if (!storedToken) {
-			signOut();
-			return;
-		}
-		setToken(storedToken);
+		const t = localStorage.getItem("token");
+		if (!t) return signOut();
+		setToken(t);
 		const name = localStorage.getItem("firstName");
 		if (name) setUserName(name);
 	}, [signOut]);
 
+	// Refetch meds whenever token or date changes
 	useEffect(() => {
 		if (token) fetchMeds(token);
 	}, [token, fetchMeds]);
 
-	async function handleSaveMed(med: { name: string | string[]; dose: string; time: string; days: string[] }) {
+	// Create / Update / Delete handlers
+	async function handleSaveMed(med: { name: string; dose: string; time: string; days: string[] }) {
 		if (!token) return;
-		const nameValue = Array.isArray(med.name) ? med.name[0] : med.name;
 		try {
-			const res = await fetch("http://localhost:5001/api/meds", {
+			const res = await fetch(MEDS, {
 				method: "POST",
-				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-				body: JSON.stringify({ name: nameValue, dosage: med.dose, schedule: { time: med.time, days: med.days } }),
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					name: med.name,
+					dosage: med.dose,
+					schedule: { time: med.time, days: med.days },
+				}),
 			});
-			if (res.status === 401) {
-				signOut();
-				return;
-			}
+			if (res.status === 401) return signOut();
 			if (res.ok) fetchMeds(token);
 			else console.error("Save med failed:", await res.text());
 		} catch (err) {
@@ -103,25 +101,22 @@ export default function Dashboard() {
 		}
 	}
 
-	async function handleUpdateMed(med: {
-		id: string;
-		name: string | string[];
-		dose: string;
-		time: string;
-		days: string[];
-	}) {
+	async function handleUpdateMed(med: { id: string; name: string; dose: string; time: string; days: string[] }) {
 		if (!token) return;
-		const nameValue = Array.isArray(med.name) ? med.name[0] : med.name;
 		try {
-			const res = await fetch(`http://localhost:5001/api/meds/${med.id}`, {
+			const res = await fetch(`${MEDS}/${med.id}`, {
 				method: "PUT",
-				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-				body: JSON.stringify({ name: nameValue, dosage: med.dose, schedule: { time: med.time, days: med.days } }),
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					name: med.name,
+					dosage: med.dose,
+					schedule: { time: med.time, days: med.days },
+				}),
 			});
-			if (res.status === 401) {
-				signOut();
-				return;
-			}
+			if (res.status === 401) return signOut();
 			if (res.ok) fetchMeds(token);
 			else console.error("Update med failed:", await res.text());
 		} catch (err) {
@@ -132,16 +127,12 @@ export default function Dashboard() {
 	async function handleDeleteMed(id: string) {
 		if (!token) return;
 		try {
-			const res = await fetch(`${API_BASE}/${id}`, {
+			const res = await fetch(`${MEDS}/${id}`, {
 				method: "DELETE",
 				headers: { Authorization: `Bearer ${token}` },
 			});
-			if (res.status === 401) {
-				signOut();
-				return;
-			}
+			if (res.status === 401) return signOut();
 			if (res.ok) {
-				// remove from both today’s and full lists
 				setScheduledMeds((m) => m.filter((x) => x._id !== id));
 				setAllMeds((m) => m.filter((x) => x._id !== id));
 			} else {
@@ -152,9 +143,12 @@ export default function Dashboard() {
 		}
 	}
 
+	// Close the menu if clicked outside
 	useEffect(() => {
 		function handleClick(e: MouseEvent) {
-			if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+			if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+				setMenuOpen(false);
+			}
 		}
 		document.addEventListener("mousedown", handleClick);
 		return () => document.removeEventListener("mousedown", handleClick);
@@ -208,6 +202,7 @@ export default function Dashboard() {
 							)}
 						</div>
 					</div>
+
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						<div className="space-y-6 max-h-[80vh] overflow-y-auto">
 							<div
@@ -220,10 +215,11 @@ export default function Dashboard() {
 								className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 animate-fadeIn"
 								style={{ animationDelay: "300ms" }}
 							>
-								<h2 className="text-xl font-medium mb-4">Today&apos;s Medications</h2>
+								<h2 className="text-xl font-medium mb-4">&apos;s Medications</h2>
 								<MedList meds={scheduledMeds} date={selectedDate} />
 							</div>
 						</div>
+
 						<div className="space-y-6 max-h-[80vh] overflow-y-auto">
 							<div
 								className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 animate-fadeIn"
@@ -242,6 +238,7 @@ export default function Dashboard() {
 						</div>
 					</div>
 				</div>
+
 				<button
 					className="fixed bottom-6 right-6 bg-green-600 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white text-3xl hover:bg-green-700 transition"
 					onClick={() => setAddModalOpen(true)}
@@ -249,6 +246,7 @@ export default function Dashboard() {
 				>
 					+
 				</button>
+
 				<AddMedModal open={addModalOpen} onClose={() => setAddModalOpen(false)} onSave={handleSaveMed} />
 				<EditMedModal
 					open={editModalOpen}

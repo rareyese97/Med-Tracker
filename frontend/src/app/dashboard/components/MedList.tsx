@@ -4,6 +4,9 @@
 import { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
 
+// Read your backend base URL (must start with NEXT_PUBLIC_)
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "") + "/api/meds";
+
 export interface ApiMed {
 	_id: string;
 	name: string;
@@ -53,8 +56,9 @@ export default function MedList({ meds, date }: MedListProps) {
 		const token = localStorage.getItem("token");
 		const dateKey = format(date, "yyyy-MM-dd");
 		const isTaken = med.takenDates?.includes(dateKey) || false;
+
 		try {
-			await fetch(`http://localhost:5001/api/meds/${med._id}/toggle`, {
+			const res = await fetch(`${API_BASE}/${med._id}/toggle`, {
 				method: "PUT",
 				headers: {
 					"Content-Type": "application/json",
@@ -62,6 +66,11 @@ export default function MedList({ meds, date }: MedListProps) {
 				},
 				body: JSON.stringify({ date: dateKey }),
 			});
+			if (!res.ok) {
+				console.error("Toggle taken failed:", await res.text());
+				return;
+			}
+
 			setList((prev) =>
 				prev.map((m) =>
 					m._id === med._id
@@ -108,7 +117,7 @@ export default function MedList({ meds, date }: MedListProps) {
 						</div>
 						<button
 							onClick={() => toggleTaken(med)}
-							className={`w-8 h-8 flex items-center justify-center rounded-full border-2 transition-colors duration-150 cursor-pointer  ${
+							className={`w-8 h-8 flex items-center justify-center rounded-full border-2 transition-colors duration-150 cursor-pointer ${
 								taken
 									? "bg-green-500 border-green-500 text-white hover:bg-green-300"
 									: "border-gray-300 text-transparent hover:bg-gray-200"

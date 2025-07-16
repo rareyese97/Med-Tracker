@@ -17,6 +17,9 @@ export default function DeleteAccountModal({ open, onClose }: DeleteAccountModal
 	const [success, setSuccess] = useState(false);
 	const router = useRouter();
 
+	// Read your backend base URL from env
+	const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!;
+
 	if (!open) return null;
 
 	const handleDelete = async () => {
@@ -24,7 +27,7 @@ export default function DeleteAccountModal({ open, onClose }: DeleteAccountModal
 		setLoading(true);
 		try {
 			const token = localStorage.getItem("token");
-			const res = await fetch("http://localhost:5001/api/auth/delete-account", {
+			const res = await fetch(`${API_BASE}/api/auth/delete-account`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -32,6 +35,7 @@ export default function DeleteAccountModal({ open, onClose }: DeleteAccountModal
 				},
 				body: JSON.stringify({ password }),
 			});
+
 			if (res.ok) {
 				// Clear client-side session
 				localStorage.removeItem("token");
@@ -86,7 +90,8 @@ export default function DeleteAccountModal({ open, onClose }: DeleteAccountModal
 						disabled={loading || success}
 						className="cursor-pointer px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center justify-center"
 					>
-						{loading && <span className="animate-spin h-4 w-4 border-2 border-white rounded-full mr-2" />}Delete
+						{loading && <span className="animate-spin h-4 w-4 border-2 border-white rounded-full mr-2" />}
+						Delete
 					</button>
 				</div>
 			</div>

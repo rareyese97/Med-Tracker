@@ -22,6 +22,9 @@ interface AlertsListProps {
 }
 
 export default function AlertsList({ date, meds, token }: AlertsListProps) {
+	const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!;
+	const INTERACTIONS = `${API_BASE}/api/interactions`;
+
 	const [alerts, setAlerts] = useState<Alert[]>([]);
 	const [interactionAlerts, setInteractionAlerts] = useState<Alert[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -36,20 +39,19 @@ export default function AlertsList({ date, meds, token }: AlertsListProps) {
 
 	// 2) Fetch interaction alerts from the API when the date or token changes
 	useEffect(() => {
-		if (!token) return; // don't fetch without a valid token
+		if (!token) return;
 		const fetchInteractions = async () => {
 			setLoading(true);
 			setError(null);
 			try {
 				const dateKey = format(date, "yyyy-MM-dd");
-				const res = await fetch(`http://localhost:5001/api/interactions?date=${dateKey}`, {
+				const res = await fetch(`${INTERACTIONS}?date=${dateKey}`, {
 					headers: { Authorization: `Bearer ${token}` },
 				});
 				if (res.ok) {
 					const data: Alert[] = await res.json();
 					setInteractionAlerts(data);
 				} else {
-					// Handle non-OK responses (including 401)
 					const message = `Error ${res.status}: ${res.statusText}`;
 					console.error("Fetch interactions failed:", message);
 					setError(message);
@@ -57,19 +59,15 @@ export default function AlertsList({ date, meds, token }: AlertsListProps) {
 				}
 			} catch (err: unknown) {
 				console.error(err);
-				if (err instanceof Error) {
-					setError(err.message);
-				} else {
-					setError("Failed to load interactions");
-				}
+				setError(err instanceof Error ? err.message : "Failed to load interactions");
 			} finally {
 				setLoading(false);
 			}
 		};
 		fetchInteractions();
-	}, [date, token]);
+	}, [date, token, INTERACTIONS]);
 
-	// 3) Combine interaction alerts + missed-dose alerts whenever meds, date, or `now` tick
+	// 3) Combine interaction alerts + missed-dose alerts
 	useEffect(() => {
 		const missed: Alert[] = (meds || []).reduce<Alert[]>((acc, m) => {
 			const [hour, minute] = m.schedule.time.split(":").map(Number);
@@ -139,7 +137,7 @@ export default function AlertsList({ date, meds, token }: AlertsListProps) {
 					</div>
 					{a.drugsInvolved && (
 						<p className="text-sm text-black">
-							<span className="font-semibold ">Drugs:</span> {a.drugsInvolved.join(", ")}
+							<span className="font-semibold">Drugs:</span> {a.drugsInvolved.join(", ")}
 						</p>
 					)}
 					{a.recommendation && <p className="text-sm italic text-black">{a.recommendation}</p>}
