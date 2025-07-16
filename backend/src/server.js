@@ -51,8 +51,6 @@ mongoose
 		app.listen(PORT, () => {
 		});
 
-		// Kick off your cron job
-		import("./jobs/sendReminders.js");
 	})
 	.catch((err) => {
 		console.error("❌  MongoDB connection error:", err);
