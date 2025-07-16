@@ -13,9 +13,9 @@ import { format } from "date-fns";
 import sgMail from "@sendgrid/mail";
 
 // 2) Configure SendGrid
-sgMail.setApiKey(process.env.SMTP_PASS);
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-if (!process.env.SMTP_PASS) {
+if (!process.env.SENDGRID_API_KEY) {
 	console.error("✖️  SENDGRID_API_KEY is missing—reminder emails will not send.");
 }
 
