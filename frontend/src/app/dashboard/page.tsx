@@ -215,7 +215,7 @@ export default function Dashboard() {
 								className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 animate-fadeIn"
 								style={{ animationDelay: "300ms" }}
 							>
-								<h2 className="text-xl font-medium mb-4">&apos;s Medications</h2>
+								<h2 className="text-xl font-medium mb-4">Today&apos;s Medications</h2>
 								<MedList meds={scheduledMeds} date={selectedDate} />
 							</div>
 						</div>
