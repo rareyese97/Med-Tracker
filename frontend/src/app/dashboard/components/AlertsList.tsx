@@ -98,7 +98,7 @@ export default function AlertsList({ date, meds, token }: AlertsListProps) {
 		return <p className="text-red-500">Error: {error}</p>;
 	}
 	if (!alerts.length) {
-		return <p className="text-gray-500">All caught up—no alerts or missed doses.</p>;
+		return <p className="text-gray-500">All caught up! No alerts or missed doses.</p>;
 	}
 
 	const severityStyles = {
