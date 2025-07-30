@@ -92,7 +92,7 @@ export default function AlertsList({ date, meds, token }: AlertsListProps) {
 	}, [meds, date, now, interactionAlerts]);
 
 	if (loading) {
-		return <p className="text-gray-500">Checking for interactions and reminders...</p>;
+		return <p className="text-gray-500">Checking for reminders...</p>;
 	}
 	if (error) {
 		return <p className="text-red-500">Error: {error}</p>;

@@ -43,7 +43,6 @@ mongoose
 	.then(() => {
 
 		// Mount your authenticated routes only once DB is up
-		app.use("/api/auth", authRoutes);
 		app.use("/api/meds", medsRoutes);
 		app.use("/api/interactions", interactionsRouter);
 
