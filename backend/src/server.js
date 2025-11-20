@@ -11,7 +11,6 @@ import interactionsRouter from "./routes/interactions.js";
 const app = express();
 
 // ─── MIDDLEWARE ────────────────────────────────────────────────────────────────
-// Allow your frontend origin to hit this API
 app.use(
 	cors({
 		origin: process.env.FRONTEND_URL || "http://localhost:3000",
@@ -21,7 +20,6 @@ app.use(
 	})
 );
 
-// Parse JSON bodies
 app.use(express.json());
 
 // Health check
@@ -36,22 +34,21 @@ if (!MONGO_URI) {
 
 // ─── CONNECT TO MONGODB & START SERVER ─────────────────────────────────────────
 mongoose
-	.connect(MONGO_URI, {
-		useNewUrlParser: true,
-		useUnifiedTopology: true,
-	})
+	.connect(MONGO_URI)
 	.then(() => {
+		console.log("✅ Connected to MongoDB");
 
-		// Mount your authenticated routes only once DB is up
+		// ─── MOUNT ROUTES ─────────────────────────────────────────────
+		app.use("/api/auth", authRoutes); 
 		app.use("/api/meds", medsRoutes);
 		app.use("/api/interactions", interactionsRouter);
 
-		// Start listening
+		// ─── START SERVER ─────────────────────────────────────────────
 		app.listen(PORT, () => {
+			console.log(`✅ Server running on port ${PORT}`);
 		});
-
 	})
 	.catch((err) => {
-		console.error("❌  MongoDB connection error:", err);
+		console.error("❌ MongoDB connection error:", err);
 		process.exit(1);
 	});
