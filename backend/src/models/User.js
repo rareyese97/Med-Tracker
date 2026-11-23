@@ -8,6 +8,8 @@ const userSchema = new mongoose.Schema(
 		email: { type: String, required: true, unique: true },
 		password: { type: String, required: true, minlength: 6 },
 		isVerified: { type: Boolean, default: false },
+		timezone: { type: String, default: "America/New_York" },
+		timezoneMode: { type: String, enum: ["auto", "fixed"], default: "auto" },
 	},
 	{ timestamps: true }
 );
