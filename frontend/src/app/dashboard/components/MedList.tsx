@@ -21,10 +21,12 @@ export interface ApiMed {
 type MedListProps = {
 	meds: ApiMed[];
 	date: Date;
+	onMedicationUpdated: (med: ApiMed) => void;
 };
 
-export default function MedList({ meds, date }: MedListProps) {
+export default function MedList({ meds, date, onMedicationUpdated }: MedListProps) {
 	const [list, setList] = useState<ApiMed[]>([]);
+	const [pendingIds, setPendingIds] = useState<string[]>([]);
 
 	useEffect(() => {
 		// Determine weekday abbreviation
@@ -53,6 +55,8 @@ export default function MedList({ meds, date }: MedListProps) {
 	}, [meds, date]);
 
 	const toggleTaken = async (med: ApiMed) => {
+		if (pendingIds.includes(med._id)) return;
+		setPendingIds((prev) => [...prev, med._id]);
 		const token = localStorage.getItem("token");
 		const dateKey = format(date, "yyyy-MM-dd");
 		const isTaken = med.takenDates?.includes(dateKey) || false;
@@ -71,18 +75,13 @@ export default function MedList({ meds, date }: MedListProps) {
 				return;
 			}
 
-			setList((prev) =>
-				prev.map((m) =>
-					m._id === med._id
-						? {
-								...m,
-								takenDates: isTaken ? m.takenDates?.filter((d) => d !== dateKey) : [...(m.takenDates || []), dateKey],
-						  }
-						: m
-				)
-			);
+			const updatedMed: ApiMed = await res.json();
+			setList((prev) => prev.map((m) => (m._id === updatedMed._id ? updatedMed : m)));
+			onMedicationUpdated(updatedMed);
 		} catch (err) {
 			console.error("Failed to toggle taken status", err);
+		} finally {
+			setPendingIds((prev) => prev.filter((id) => id !== med._id));
 		}
 	};
 
@@ -117,7 +116,9 @@ export default function MedList({ meds, date }: MedListProps) {
 						</div>
 						<button
 							onClick={() => toggleTaken(med)}
-							className={`w-8 h-8 flex items-center justify-center rounded-full border-2 transition-colors duration-150 cursor-pointer ${
+							disabled={pendingIds.includes(med._id)}
+							aria-label={taken ? `Mark ${med.name} as not taken` : `Mark ${med.name} as taken`}
+							className={`w-8 h-8 flex items-center justify-center rounded-full border-2 transition-colors duration-150 cursor-pointer disabled:opacity-50 ${
 								taken
 									? "bg-green-500 border-green-500 text-white hover:bg-green-300"
 									: "border-gray-300 text-transparent hover:bg-gray-200"
