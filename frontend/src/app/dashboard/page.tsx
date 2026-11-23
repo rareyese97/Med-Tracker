@@ -186,6 +186,16 @@ export default function Dashboard() {
 		}
 	}
 
+	// Keep every dashboard section in sync with the medication returned by the API.
+	function handleMedicationUpdated(updatedMed: ApiMed) {
+		setScheduledMeds((prev) =>
+			prev.map((med) => (med._id === updatedMed._id ? updatedMed : med))
+		);
+		setAllMeds((prev) =>
+			prev.map((med) => (med._id === updatedMed._id ? updatedMed : med))
+		);
+	}
+
 	// Create / Update / Delete handlers
 	async function handleSaveMed(med: { name: string; dose: string; time: string; days: string[] }) {
 		if (!token) return;
@@ -335,7 +345,7 @@ export default function Dashboard() {
 								style={{ animationDelay: "300ms" }}
 							>
 								<h2 className="text-xl font-medium mb-4">Today&apos;s Medications</h2>
-								<MedList meds={scheduledMeds} date={selectedDate} />
+								<MedList meds={scheduledMeds} date={selectedDate} onMedicationUpdated={handleMedicationUpdated} />
 							</div>
 						</div>
 
@@ -352,7 +362,7 @@ export default function Dashboard() {
 								style={{ animationDelay: "700ms" }}
 							>
 								<h2 className="text-xl font-medium mb-4">Total Taken Counts</h2>
-								<TodayMedBarChart meds={scheduledMeds} />
+								<TodayMedBarChart meds={allMeds} />
 							</div>
 						</div>
 					</div>
