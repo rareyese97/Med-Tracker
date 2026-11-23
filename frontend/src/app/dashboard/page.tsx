@@ -119,9 +119,10 @@ export default function Dashboard() {
 
 				if (mode === "auto") {
 					setTimezone(detectedTimezone);
+					setTimezoneDraft(detectedTimezone);
 					setSelectedDate(getDateInTimezone(detectedTimezone));
 					if (detectedTimezone !== savedTimezone) {
-						await fetch(`${AUTH}/timezone`, {
+						const timezoneRes = await fetch(`${AUTH}/timezone`, {
 							method: "PUT",
 							headers: {
 								"Content-Type": "application/json",
@@ -129,6 +130,9 @@ export default function Dashboard() {
 							},
 							body: JSON.stringify({ timezone: detectedTimezone, mode: "auto" }),
 						});
+						if (!timezoneRes.ok) {
+							console.error("Unable to sync detected timezone:", await timezoneRes.text());
+						}
 					}
 				} else {
 					setTimezone(savedTimezone);
