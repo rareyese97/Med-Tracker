@@ -405,6 +405,7 @@ export default function Dashboard() {
 							) : (
 								<p className="text-sm text-gray-600 dark:text-gray-300 mb-4">Detected timezone: <strong>{Intl.DateTimeFormat().resolvedOptions().timeZone}</strong></p>
 							)}
+							<p className="text-xs text-gray-500 dark:text-gray-400 mt-3">Active reminder timezone: <strong>{timezone}</strong></p>
 							{timezoneMessage && <p className="text-sm mt-3 text-gray-700 dark:text-gray-200">{timezoneMessage}</p>}
 							<div className="flex justify-end gap-3 mt-6">
 								<button onClick={() => setSettingsOpen(false)} className="rounded-lg px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Cancel</button>
