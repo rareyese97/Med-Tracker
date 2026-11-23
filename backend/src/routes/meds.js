@@ -11,9 +11,15 @@ router.get("/", authMiddleware, async (req, res) => {
 	try {
 		let query = { user: req.user.id };
 		if (req.query.date) {
-			const d = new Date(req.query.date);
-			if (isNaN(d)) return res.status(400).json({ message: "Invalid date" });
-			const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+			const dateValue = String(req.query.date);
+			if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dateValue)) {
+				return res.status(400).json({ message: "Invalid date" });
+			}
+			const d = new Date(`${dateValue}T12:00:00.000Z`);
+			if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== dateValue) {
+				return res.status(400).json({ message: "Invalid date" });
+			}
+			const dayName = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getUTCDay()];
 			query["schedule.days"] = dayName;
 		}
 		const meds = await Meds.find(query).lean();
