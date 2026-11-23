@@ -35,7 +35,7 @@ function buildEmailHtml({ preheader, title, intro, contentHtml }) {
 				<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:540px;background-color:#ffffff;border:1px solid #e7e5e4;border-radius:14px;overflow:hidden;">
 					<tr>
 						<td style="padding:28px 32px;background-color:#1e293b;color:#ffffff;">
-							<p style="margin:0;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;color:#e7e5e4;">Med-Tracker.app</p>
+							<p style="margin:0;font-size:13px;letter-spacing:1.4px;font-weight:700;color:#e7e5e4;">Med-Tracker.app</p>
 							<h1 style="margin:12px 0 0;font-size:24px;line-height:1.3;font-weight:700;color:#ffffff;">${escapeHtml(title)}</h1>
 						</td>
 					</tr>
