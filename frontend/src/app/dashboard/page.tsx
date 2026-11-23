@@ -391,7 +391,7 @@ export default function Dashboard() {
 								onChange={(e) => setTimezoneMode(e.target.value as "auto" | "fixed")}
 								className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 p-2.5 mb-4"
 							>
-								<option value="auto">Automatic — follow my current location's timezone</option>
+								<option value="auto">Automatic — follow my device's current timezone</option>
 								<option value="fixed">Fixed — always use a selected timezone</option>
 							</select>
 							{timezoneMode === "fixed" ? (
