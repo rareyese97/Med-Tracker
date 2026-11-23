@@ -47,11 +47,11 @@ function buildEmailHtml({ preheader, title, intro, contentHtml }) {
 					</tr>
 					<tr>
 						<td style="padding:18px 32px;background-color:#fafaf9;border-top:1px solid #e7e5e4;">
-							<p style="margin:0;font-size:12px;line-height:1.6;color:#78716c;">This is an automated message from Medicine Tracker. Please do not reply to this email.</p>
+							<p style="margin:0;font-size:12px;line-height:1.6;color:#57534e;">This is an automated message from Medicine Tracker. Please do not reply to this email.</p>
 						</td>
 					</tr>
 				</table>
-				<p style="margin:16px 0 0;font-size:11px;line-height:1.5;color:#a8a29e;">Helping you stay on track with your medications.</p>
+				<p style="margin:16px 0 0;font-size:11px;line-height:1.5;color:#57534e;">Helping you stay on track with your medications.</p>
 			</td>
 		</tr>
 	</table>
@@ -91,12 +91,12 @@ If you did not create a Medicine Tracker account, you can safely ignore this ema
 			contentHtml: `
 				<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;background-color:#f5f5f4;border:1px solid #e7e5e4;border-radius:10px;">
 					<tr><td align="center" style="padding:20px 12px;">
-						<p style="margin:0 0 8px;color:#78716c;font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;">Your verification code</p>
+						<p style="margin:0 0 8px;color:#57534e;font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;">Your verification code</p>
 						<p style="margin:0;color:#1e293b;font-size:34px;line-height:1.3;font-weight:700;letter-spacing:9px;">${safeCode}</p>
 					</td></tr>
 				</table>
 				<p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#57534e;">This code expires in <strong>10 minutes</strong>. For your security, never share it with anyone.</p>
-				<p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#78716c;">If you didn't create a Medicine Tracker account, you can safely ignore this email.</p>`,
+				<p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#57534e;">If you didn't create a Medicine Tracker account, you can safely ignore this email.</p>`,
 		});
 
 	await sendEmail({
@@ -126,9 +126,9 @@ This link expires in 1 hour. If you did not request a password reset, you can sa
 				</td></tr>
 			</table>
 			<p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#57534e;">This link expires in <strong>1 hour</strong>.</p>
-			<p style="margin:16px 0 6px;font-size:13px;line-height:1.6;color:#78716c;">If the button doesn't work, copy and paste this link into your browser:</p>
+			<p style="margin:16px 0 6px;font-size:13px;line-height:1.6;color:#57534e;">If the button doesn't work, copy and paste this link into your browser:</p>
 			<p style="margin:0;word-break:break-all;font-size:12px;line-height:1.6;color:#57534e;">${safeLink}</p>
-			<p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#78716c;">If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>`,
+			<p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#57534e;">If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>`,
 	});
 
 	await sendEmail({ to, subject: "Reset your password | Medicine Tracker", text, html });
@@ -151,12 +151,12 @@ If you've already taken this medication, you can disregard this reminder.
 		contentHtml: `
 			<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;background-color:#f5f5f4;border:1px solid #e7e5e4;border-radius:10px;">
 				<tr><td style="padding:20px 22px;">
-					<p style="margin:0 0 6px;color:#78716c;font-size:12px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;">Medication</p>
+					<p style="margin:0 0 6px;color:#57534e;font-size:12px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;">Medication</p>
 					<p style="margin:0;color:#1e293b;font-size:21px;line-height:1.4;font-weight:700;">${safeName}</p>
 					<p style="margin:10px 0 0;color:#57534e;font-size:14px;line-height:1.6;">Scheduled for <strong>${escapeHtml(time)}</strong> on <strong>${escapeHtml(date)}</strong></p>
 				</td></tr>
 			</table>
-			<p style="margin:0;font-size:14px;line-height:1.6;color:#78716c;">If you've already taken this medication, you can disregard this reminder.</p>`,
+			<p style="margin:0;font-size:14px;line-height:1.6;color:#57534e;">If you've already taken this medication, you can disregard this reminder.</p>`,
 	});
 
 	await sendEmail({
