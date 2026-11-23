@@ -15,15 +15,15 @@ import { Bars3Icon } from "@heroicons/react/24/outline";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 
 const supportedTimezones = (() => {
-\tconst intl = Intl as typeof Intl & { supportedValuesOf?: (key: "timeZone") => string[] };
-\tconst zones = intl.supportedValuesOf?.("timeZone") ?? [
-\t\t"Africa/Cairo", "America/Chicago", "America/Denver", "America/Los_Angeles",
-\t\t"America/New_York", "America/Phoenix", "America/Toronto", "Asia/Dubai",
-\t\t"Asia/Hong_Kong", "Asia/Kolkata", "Asia/Seoul", "Asia/Shanghai",
-\t\t"Asia/Singapore", "Asia/Tokyo", "Australia/Sydney", "Europe/Berlin",
-\t\t"Europe/London", "Europe/Paris", "Pacific/Auckland",
-\t];
-\treturn Array.from(new Set(["UTC", ...zones])).sort((a, b) => a.localeCompare(b));
+	const intl = Intl as typeof Intl & { supportedValuesOf?: (key: "timeZone") => string[] };
+	const zones = intl.supportedValuesOf?.("timeZone") ?? [
+		"Africa/Cairo", "America/Chicago", "America/Denver", "America/Los_Angeles",
+		"America/New_York", "America/Phoenix", "America/Toronto", "Asia/Dubai",
+		"Asia/Hong_Kong", "Asia/Kolkata", "Asia/Seoul", "Asia/Shanghai",
+		"Asia/Singapore", "Asia/Tokyo", "Australia/Sydney", "Europe/Berlin",
+		"Europe/London", "Europe/Paris", "Pacific/Auckland",
+	];
+	return Array.from(new Set(["UTC", ...zones])).sort((a, b) => a.localeCompare(b));
 })();
 
 function getDateInTimezone(timezone: string): Date {
