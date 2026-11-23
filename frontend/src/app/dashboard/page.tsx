@@ -385,8 +385,9 @@ export default function Dashboard() {
 					onDelete={handleDeleteMed}
 				/>
 				{settingsOpen && (
-					<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSettingsOpen(false)}>
-						<div className="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+					<div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSettingsOpen(false)}>
+					<div className="absolute inset-0 bg-black bg-opacity-30 backdrop-blur-sm" />
+						<div className="relative w-full max-w-md rounded-xl bg-white dark:bg-gray-900 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
 							<div className="flex items-center justify-between mb-4">
 								<h2 className="text-xl font-semibold">Time Zone Settings</h2>
 								<button onClick={() => setSettingsOpen(false)} className="text-gray-500 hover:text-gray-800 dark:hover:text-white" aria-label="Close settings">✕</button>
