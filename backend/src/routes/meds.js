@@ -12,7 +12,7 @@ router.get("/", authMiddleware, async (req, res) => {
 		let query = { user: req.user.id };
 		if (req.query.date) {
 			const dateValue = String(req.query.date);
-			if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dateValue)) {
+			if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
 				return res.status(400).json({ message: "Invalid date" });
 			}
 			const d = new Date(`${dateValue}T12:00:00.000Z`);
