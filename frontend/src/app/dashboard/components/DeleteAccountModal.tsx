@@ -60,8 +60,8 @@ export default function DeleteAccountModal({ open, onClose }: DeleteAccountModal
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-			<div className="absolute inset-0 bg-black bg-opacity-30 backdrop-blur-sm" />
-			<div className="relative bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md p-6">
+			<div className="absolute inset-0 bg-black/15 backdrop-blur-[2px]" />
+			<div className="relative bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md p-6 fade-in">
 				<div className="flex justify-between items-center mb-4">
 					<h2 className="text-2xl font-semibold text-red-600">Delete Account</h2>
 					<button onClick={onClose} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md cursor-pointer">
