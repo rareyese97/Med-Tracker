@@ -20,7 +20,18 @@ export default function VerifyEmailForm({ email, onBackToLogin }: VerifyEmailFor
 	}, []);
 
 	const handleChange = (e: ChangeEvent<HTMLInputElement>, idx: number) => {
-		const val = e.target.value.replace(/[^0-9]/g, "").slice(-1);
+		const digits = e.target.value.replace(/[^0-9]/g, "");
+		if (digits.length > 1) {
+			const updated = Array(6).fill("");
+			digits.slice(0, 6).split("").forEach((digit: string, index: number) => {
+				updated[index] = digit;
+			});
+			setCode(updated);
+			inputsRef.current[Math.min(digits.length, 5)]?.focus();
+			return;
+		}
+
+		const val = digits.slice(-1);
 		const updated = [...code];
 		updated[idx] = val;
 		setCode(updated);
@@ -127,7 +138,7 @@ export default function VerifyEmailForm({ email, onBackToLogin }: VerifyEmailFor
 						key={idx}
 						type="text"
 						inputMode="numeric"
-						maxLength={1}
+						maxLength={idx === 0 ? 6 : 1}
 						autoComplete={idx === 0 ? "one-time-code" : "off"}
 						value={digit}
 						onChange={(e) => handleChange(e, idx)}
