@@ -12,6 +12,19 @@ import EditMedModal from "./components/EditMedModal";
 import DeleteAccountModal from "./components/DeleteAccountModal";
 import TodayMedBarChart from "./components/TakenMedChart";
 import { Bars3Icon } from "@heroicons/react/24/outline";
+import { XMarkIcon } from "@heroicons/react/24/solid";
+
+const supportedTimezones = (() => {
+\tconst intl = Intl as typeof Intl & { supportedValuesOf?: (key: "timeZone") => string[] };
+\tconst zones = intl.supportedValuesOf?.("timeZone") ?? [
+\t\t"Africa/Cairo", "America/Chicago", "America/Denver", "America/Los_Angeles",
+\t\t"America/New_York", "America/Phoenix", "America/Toronto", "Asia/Dubai",
+\t\t"Asia/Hong_Kong", "Asia/Kolkata", "Asia/Seoul", "Asia/Shanghai",
+\t\t"Asia/Singapore", "Asia/Tokyo", "Australia/Sydney", "Europe/Berlin",
+\t\t"Europe/London", "Europe/Paris", "Pacific/Auckland",
+\t];
+\treturn Array.from(new Set(["UTC", ...zones])).sort((a, b) => a.localeCompare(b));
+})();
 
 function getDateInTimezone(timezone: string): Date {
 	const parts = new Intl.DateTimeFormat("en-US", {
@@ -400,7 +413,7 @@ export default function Dashboard() {
 								id="timezone-mode"
 								value={timezoneMode}
 								onChange={(e) => setTimezoneMode(e.target.value as "auto" | "fixed")}
-								className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 p-2.5 mb-4"
+								className="w-full min-w-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2.5 mb-4 text-sm"
 							>
 								<option value="auto">Automatic — follow my device's current timezone</option>
 								<option value="fixed">Fixed — always use a selected timezone</option>
@@ -418,10 +431,10 @@ export default function Dashboard() {
 									<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Examples: America/New_York, Europe/London, Asia/Tokyo.</p>
 								</>
 							) : (
-								<p className="text-sm text-gray-600 dark:text-gray-300 mb-4">Detected timezone: <strong>{Intl.DateTimeFormat().resolvedOptions().timeZone}</strong></p>
+								<p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 mb-4 break-words">Detected timezone: <strong className="break-all">{Intl.DateTimeFormat().resolvedOptions().timeZone}</strong></p>
 							)}
-							<p className="text-xs text-gray-500 dark:text-gray-400 mt-3">Active reminder timezone: <strong>{timezone}</strong></p>
-							{timezoneMessage && <p className="text-sm mt-3 text-gray-700 dark:text-gray-200">{timezoneMessage}</p>}
+							<p className="text-xs leading-relaxed text-gray-600 dark:text-gray-300 mt-4 break-words">Active reminder timezone: <strong className="break-all">{timezone}</strong></p>
+							{timezoneMessage && <p className="text-sm leading-relaxed mt-3 text-gray-700 dark:text-gray-200 break-words">{timezoneMessage}</p>}
 							<div className="flex justify-end gap-3 mt-6">
 								<button onClick={() => setSettingsOpen(false)} className="rounded-lg px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Cancel</button>
 								<button onClick={saveTimezoneSettings} disabled={timezoneSaving} className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
