@@ -13,6 +13,20 @@ import DeleteAccountModal from "./components/DeleteAccountModal";
 import TodayMedBarChart from "./components/TakenMedChart";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 
+function getDateInTimezone(timezone: string): Date {
+	const parts = new Intl.DateTimeFormat("en-US", {
+		timeZone: timezone,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).formatToParts(new Date());
+	const year = Number(parts.find((part) => part.type === "year")?.value);
+	const month = Number(parts.find((part) => part.type === "month")?.value);
+	const day = Number(parts.find((part) => part.type === "day")?.value);
+	return new Date(year, month - 1, day, 12);
+}
+
+
 export default function Dashboard() {
 	const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!;
 	const MEDS = `${API_BASE}/api/meds`;
@@ -105,6 +119,7 @@ export default function Dashboard() {
 
 				if (mode === "auto") {
 					setTimezone(detectedTimezone);
+					setSelectedDate(getDateInTimezone(detectedTimezone));
 					if (detectedTimezone !== savedTimezone) {
 						await fetch(`${AUTH}/timezone`, {
 							method: "PUT",
@@ -117,6 +132,7 @@ export default function Dashboard() {
 					}
 				} else {
 					setTimezone(savedTimezone);
+					setSelectedDate(getDateInTimezone(savedTimezone));
 				}
 			} catch (err) {
 				console.error("Timezone sync failed:", err);
@@ -156,6 +172,7 @@ export default function Dashboard() {
 			if (!res.ok) throw new Error(payload.message || "Unable to save timezone");
 			setTimezone(payload.timezone);
 			setTimezoneMode(payload.timezoneMode);
+			setSelectedDate(getDateInTimezone(payload.timezone));
 			setTimezoneDraft(payload.timezone);
 			setTimezoneMessage("Timezone settings saved.");
 		} catch (err) {
