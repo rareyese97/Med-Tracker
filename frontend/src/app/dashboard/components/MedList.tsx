@@ -59,7 +59,6 @@ export default function MedList({ meds, date, onMedicationUpdated }: MedListProp
 		setPendingIds((prev) => [...prev, med._id]);
 		const token = localStorage.getItem("token");
 		const dateKey = format(date, "yyyy-MM-dd");
-		const isTaken = med.takenDates?.includes(dateKey) || false;
 
 		try {
 			const res = await fetch(`${API_BASE}/${med._id}/toggle`, {
