@@ -5,13 +5,10 @@ import { useState, useEffect } from "react";
 import {
 	format,
 	parse,
-	startOfToday,
 	eachDayOfInterval,
 	endOfMonth,
 	add,
 	getDay,
-	isSameMonth,
-	isToday,
 } from "date-fns";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 
