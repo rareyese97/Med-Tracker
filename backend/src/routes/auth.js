@@ -3,10 +3,11 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import Otp from "../models/Otp.js";
-import Med from "../models/Meds.js"; 
+import Med from "../models/Meds.js";
 import { generateOtp } from "../utils/otp.js";
-import { sendOtpEmail } from "../utils/email.js";
+import { sendOtpEmail, sendResetEmail } from "../utils/email.js";
 import crypto from "crypto";
+import authMiddleware from "../middleware/auth.js";
 
 const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL;
@@ -71,7 +72,7 @@ router.post("/send-code", async (req, res) => {
 		}
 
 		const code = generateOtp();
-		const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+		const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
 		await Otp.findOneAndUpdate({ email }, { code, expiresAt }, { upsert: true, new: true });
 		await sendOtpEmail(email, code);
@@ -102,14 +103,12 @@ router.post("/verify-code", async (req, res) => {
 
 // ─── DELETE ACCOUNT ───────────────────────────────────────────────────────────
 router.post("/delete-account", async (req, res) => {
-	// Authenticate via Bearer token
 	const authHeader = req.headers.authorization || "";
 	if (!authHeader.startsWith("Bearer ")) {
 		return res.status(401).json({ message: "Missing or invalid authorization header" });
 	}
 	const token = authHeader.slice(7);
 
-	// Verify JWT
 	let payload;
 	try {
 		payload = jwt.verify(token, process.env.JWT_SECRET);
@@ -128,16 +127,12 @@ router.post("/delete-account", async (req, res) => {
 			return res.status(404).json({ message: "User not found" });
 		}
 
-		// Verify password
 		if (!(await user.comparePassword(password))) {
 			return res.status(400).json({ message: "Incorrect password" });
 		}
 
-		// Delete associated data
 		await Med.deleteMany({ user: user._id });
 		await Otp.deleteMany({ email: user.email });
-
-		// Delete user
 		await User.deleteOne({ _id: user._id });
 
 		res.json({ message: "Account and all associated data deleted" });
@@ -157,24 +152,17 @@ router.post("/request-password-reset", async (req, res) => {
 	try {
 		const user = await User.findOne({ email });
 		if (!user) {
-			// for security
+			// Keep the response generic so account existence is not disclosed.
 			return res.status(200).json({ message: "If that email exists, a reset link has been sent." });
 		}
 
-		// generate a secure token
 		const token = crypto.randomBytes(32).toString("hex");
-		const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+		const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-		// upsert into Otp collection
 		await Otp.findOneAndUpdate({ email, type: "reset" }, { code: token, expiresAt }, { upsert: true, new: true });
 
-		// send the reset email
 		const resetLink = `${FRONTEND_URL}/reset-password?email=${encodeURIComponent(email)}&token=${token}`;
-		await sendOtpEmail(email, token, {
-			subject: "Your password reset link",
-			text: `Click here to reset your password:\n\n${resetLink}\n\nThis link expires in 1 hour.`,
-			html: `<p>Click <a href="${resetLink}">here</a> to reset your password. This link expires in 1 hour.</p>`,
-		});
+		await sendResetEmail(email, resetLink);
 
 		res.json({ message: "If that email exists, a reset link has been sent." });
 	} catch (err) {
@@ -191,13 +179,11 @@ router.post("/reset-password", async (req, res) => {
 	}
 
 	try {
-		// find the reset record
 		const record = await Otp.findOne({ email, code: token, type: "reset" });
 		if (!record || record.expiresAt < new Date()) {
 			return res.status(400).json({ message: "Invalid or expired reset link" });
 		}
 
-		// find and update the user
 		const user = await User.findOne({ email });
 		if (!user) {
 			return res.status(404).json({ message: "User not found" });
@@ -205,14 +191,54 @@ router.post("/reset-password", async (req, res) => {
 
 		user.password = newPassword;
 		await user.save();
-
-		// clean up
 		await Otp.deleteOne({ _id: record._id });
 
 		res.json({ message: "Password has been reset successfully" });
 	} catch (err) {
 		console.error(err);
 		res.status(500).json({ message: err.message });
+	}
+});
+
+
+// ─── CURRENT USER & TIMEZONE PREFERENCES ──────────────────────────────────────
+router.get("/me", authMiddleware, async (req, res) => {
+	try {
+		const user = await User.findById(req.user.id).select("firstName email timezone timezoneMode");
+		if (!user) return res.status(404).json({ message: "User not found" });
+		res.json({
+			firstName: user.firstName,
+			email: user.email,
+			timezone: user.timezone || "America/New_York",
+			timezoneMode: user.timezoneMode || "auto",
+		});
+	} catch (err) {
+		console.error("Get profile error:", err);
+		res.status(500).json({ message: "Unable to load account settings" });
+	}
+});
+
+router.put("/timezone", authMiddleware, async (req, res) => {
+	const { timezone, mode } = req.body;
+	if (!["auto", "fixed"].includes(mode) || typeof timezone !== "string" || !timezone.trim()) {
+		return res.status(400).json({ message: "A valid timezone and mode are required" });
+	}
+	try {
+		// Validate IANA timezone identifiers before saving them.
+		new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+		const user = await User.findByIdAndUpdate(
+			req.user.id,
+			{ timezone, timezoneMode: mode },
+			{ new: true, runValidators: true }
+		).select("timezone timezoneMode");
+		if (!user) return res.status(404).json({ message: "User not found" });
+		res.json({ timezone: user.timezone, timezoneMode: user.timezoneMode });
+	} catch (err) {
+		if (err instanceof RangeError) {
+			return res.status(400).json({ message: "Please enter a valid IANA timezone, such as America/New_York." });
+		}
+		console.error("Update timezone error:", err);
+		res.status(500).json({ message: "Unable to update timezone settings" });
 	}
 });
 

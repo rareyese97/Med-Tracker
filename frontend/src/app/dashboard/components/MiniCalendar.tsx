@@ -5,29 +5,39 @@ import { useState, useEffect } from "react";
 import {
 	format,
 	parse,
-	startOfToday,
 	eachDayOfInterval,
 	endOfMonth,
 	add,
 	getDay,
 	isSameMonth,
-	isToday,
 } from "date-fns";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 
 interface MiniCalendarProps {
 	selectedDate: Date;
 	onSelectDate: (d: Date) => void;
+	timezone: string;
 }
 
-export default function MiniCalendar({ selectedDate, onSelectDate }: MiniCalendarProps) {
-	const today = startOfToday();
+export default function MiniCalendar({ selectedDate, onSelectDate, timezone }: MiniCalendarProps) {
+	const parts = new Intl.DateTimeFormat("en-US", {
+		timeZone: timezone,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).formatToParts(new Date());
+	const today = new Date(
+		Number(parts.find((part) => part.type === "year")?.value),
+		Number(parts.find((part) => part.type === "month")?.value) - 1,
+		Number(parts.find((part) => part.type === "day")?.value),
+		12
+	);
 	const [currentMonth, setCurrentMonth] = useState(format(today, "MMM-yyyy"));
 
 	useEffect(() => {
-		const parsed = parse(currentMonth, "MMM-yyyy", new Date());
-		if (!isSameMonth(parsed, selectedDate)) onSelectDate(parsed);
-	}, [currentMonth, selectedDate, onSelectDate]);
+		const selectedMonth = format(selectedDate, "MMM-yyyy");
+		if (currentMonth !== selectedMonth) setCurrentMonth(selectedMonth);
+	}, [selectedDate, currentMonth]);
 
 	const firstDayOfMonth = parse(currentMonth, "MMM-yyyy", new Date());
 	const days = eachDayOfInterval({ start: firstDayOfMonth, end: endOfMonth(firstDayOfMonth) });
@@ -39,14 +49,22 @@ export default function MiniCalendar({ selectedDate, onSelectDate }: MiniCalenda
 		<div>
 			<div className="flex items-center justify-between px-2">
 				<button
-					onClick={() => setCurrentMonth(format(add(firstDayOfMonth, { months: -1 }), "MMM-yyyy"))}
+					onClick={() => {
+						const nextMonth = add(firstDayOfMonth, { months: -1 });
+						setCurrentMonth(format(nextMonth, "MMM-yyyy"));
+						onSelectDate(nextMonth);
+					}}
 					className="p-1 rounded hover:bg-gray-200 cursor-pointer"
 				>
 					<ChevronLeftIcon className="w-5 h-5" />
 				</button>
 				<span className="font-semibold text-lg">{format(firstDayOfMonth, "MMMM yyyy")}</span>
 				<button
-					onClick={() => setCurrentMonth(format(add(firstDayOfMonth, { months: 1 }), "MMM-yyyy"))}
+					onClick={() => {
+						const nextMonth = add(firstDayOfMonth, { months: 1 });
+						setCurrentMonth(format(nextMonth, "MMM-yyyy"));
+						onSelectDate(nextMonth);
+					}}
 					className="p-1 rounded hover:bg-gray-200 cursor-pointer"
 				>
 					<ChevronRightIcon className="w-5 h-5" />
@@ -69,7 +87,7 @@ export default function MiniCalendar({ selectedDate, onSelectDate }: MiniCalenda
 							key={day.toString()}
 							onClick={() => onSelectDate(day)}
 							className={`h-8 w-8 rounded-full flex items-center justify-center cursor-pointer
-                ${isToday(day) ? "font-semibold" : ""}
+                ${format(day, "yyyy-MM-dd") === format(today, "yyyy-MM-dd") ? "font-semibold" : ""}
                 ${isSel ? "bg-green-600 text-white hover:bg-green-300" : "hover:bg-gray-200"}
                 ${!isSameMonth(day, firstDayOfMonth) ? "text-gray-400" : ""}`}
 						>

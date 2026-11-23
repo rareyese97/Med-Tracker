@@ -1,7 +1,7 @@
 // src/app/components/VerifyEmailForm.tsx
 "use client";
 
-import { useState, useRef, useEffect, ChangeEvent, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, ChangeEvent, KeyboardEvent, ClipboardEvent } from "react";
 import * as auth from "../services/auth";
 
 type VerifyEmailFormProps = {
@@ -20,13 +20,43 @@ export default function VerifyEmailForm({ email, onBackToLogin }: VerifyEmailFor
 	}, []);
 
 	const handleChange = (e: ChangeEvent<HTMLInputElement>, idx: number) => {
-		const val = e.target.value.replace(/[^0-9]/g, "").slice(-1);
+		const digits = e.target.value.replace(/[^0-9]/g, "");
+		if (digits.length > 1) {
+			const updated = Array(6).fill("");
+			digits.slice(0, 6).split("").forEach((digit: string, index: number) => {
+				updated[index] = digit;
+			});
+			setCode(updated);
+			inputsRef.current[Math.min(digits.length, 5)]?.focus();
+			return;
+		}
+
+		const val = digits.slice(-1);
 		const updated = [...code];
 		updated[idx] = val;
 		setCode(updated);
 		if (val && idx < 5) {
 			inputsRef.current[idx + 1]?.focus();
 		}
+	};
+
+	const handlePaste = (e: ClipboardEvent<HTMLInputElement>, idx: number) => {
+		e.preventDefault();
+		const pasted = e.clipboardData.getData("text").replace(/[^0-9]/g, "");
+		if (!pasted) return;
+
+		// A complete verification code should populate all six boxes,
+		// even if the user pastes while focused on a box other than the first.
+		const startIndex = pasted.length >= 6 ? 0 : idx;
+		const digits = pasted.slice(0, 6 - startIndex).split("");
+		const updated = [...code];
+		digits.forEach((digit, offset) => {
+			updated[startIndex + offset] = digit;
+		});
+		setCode(updated);
+
+		const nextIndex = Math.min(startIndex + digits.length, 5);
+		inputsRef.current[nextIndex]?.focus();
 	};
 
 	const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, idx: number) => {
@@ -108,9 +138,11 @@ export default function VerifyEmailForm({ email, onBackToLogin }: VerifyEmailFor
 						key={idx}
 						type="text"
 						inputMode="numeric"
-						maxLength={1}
+						maxLength={idx === 0 ? 6 : 1}
+						autoComplete={idx === 0 ? "one-time-code" : "off"}
 						value={digit}
 						onChange={(e) => handleChange(e, idx)}
+						onPaste={(e) => handlePaste(e, idx)}
 						onKeyDown={(e) => handleKeyDown(e, idx)}
 						ref={(el) => {
 							if (el) inputsRef.current[idx] = el;

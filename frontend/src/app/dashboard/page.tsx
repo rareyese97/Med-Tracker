@@ -13,9 +13,24 @@ import DeleteAccountModal from "./components/DeleteAccountModal";
 import TodayMedBarChart from "./components/TakenMedChart";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 
+function getDateInTimezone(timezone: string): Date {
+	const parts = new Intl.DateTimeFormat("en-US", {
+		timeZone: timezone,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).formatToParts(new Date());
+	const year = Number(parts.find((part) => part.type === "year")?.value);
+	const month = Number(parts.find((part) => part.type === "month")?.value);
+	const day = Number(parts.find((part) => part.type === "day")?.value);
+	return new Date(year, month - 1, day, 12);
+}
+
+
 export default function Dashboard() {
 	const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!;
 	const MEDS = `${API_BASE}/api/meds`;
+	const AUTH = `${API_BASE}/api/auth`;
 
 	const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 	const [addModalOpen, setAddModalOpen] = useState(false);
@@ -26,6 +41,12 @@ export default function Dashboard() {
 	const [allMeds, setAllMeds] = useState<ApiMed[]>([]);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [token, setToken] = useState<string>("");
+	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [timezone, setTimezone] = useState("America/New_York");
+	const [timezoneMode, setTimezoneMode] = useState<"auto" | "fixed">("auto");
+	const [timezoneDraft, setTimezoneDraft] = useState("America/New_York");
+	const [timezoneMessage, setTimezoneMessage] = useState("");
+	const [timezoneSaving, setTimezoneSaving] = useState(false);
 	const router = useRouter();
 	const menuRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +97,104 @@ export default function Dashboard() {
 	useEffect(() => {
 		if (token) fetchMeds(token);
 	}, [token, fetchMeds]);
+
+
+	// Keep automatic timezone preferences in sync with the device when the app
+	// opens or returns to the foreground. Fixed preferences are never overwritten.
+	useEffect(() => {
+		if (!token) return;
+
+		const syncTimezone = async () => {
+			const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+			try {
+				const profileRes = await fetch(`${AUTH}/me`, {
+					headers: { Authorization: `Bearer ${token}` },
+				});
+				if (!profileRes.ok) return;
+				const profile = await profileRes.json();
+				const mode = profile.timezoneMode === "fixed" ? "fixed" : "auto";
+				const savedTimezone = profile.timezone || "America/New_York";
+				setTimezoneMode(mode);
+				setTimezoneDraft(savedTimezone);
+
+				if (mode === "auto") {
+					setTimezone(detectedTimezone);
+					setTimezoneDraft(detectedTimezone);
+					setSelectedDate(getDateInTimezone(detectedTimezone));
+					if (detectedTimezone !== savedTimezone) {
+						const timezoneRes = await fetch(`${AUTH}/timezone`, {
+							method: "PUT",
+							headers: {
+								"Content-Type": "application/json",
+								Authorization: `Bearer ${token}`,
+							},
+							body: JSON.stringify({ timezone: detectedTimezone, mode: "auto" }),
+						});
+						if (!timezoneRes.ok) {
+							console.error("Unable to sync detected timezone:", await timezoneRes.text());
+						}
+					}
+				} else {
+					setTimezone(savedTimezone);
+					setSelectedDate(getDateInTimezone(savedTimezone));
+				}
+			} catch (err) {
+				console.error("Timezone sync failed:", err);
+			}
+		};
+
+		const handleVisibility = () => {
+			if (document.visibilityState === "visible") syncTimezone();
+		};
+		syncTimezone();
+		window.addEventListener("focus", syncTimezone);
+		document.addEventListener("visibilitychange", handleVisibility);
+		return () => {
+			window.removeEventListener("focus", syncTimezone);
+			document.removeEventListener("visibilitychange", handleVisibility);
+		};
+	}, [token, AUTH]);
+
+	async function saveTimezoneSettings() {
+		if (!token) return;
+		const nextTimezone =
+			timezoneMode === "auto"
+				? Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York"
+				: timezoneDraft.trim();
+		setTimezoneSaving(true);
+		setTimezoneMessage("");
+		try {
+			const res = await fetch(`${AUTH}/timezone`, {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({ timezone: nextTimezone, mode: timezoneMode }),
+			});
+			const payload = await res.json();
+			if (!res.ok) throw new Error(payload.message || "Unable to save timezone");
+			setTimezone(payload.timezone);
+			setTimezoneMode(payload.timezoneMode);
+			setSelectedDate(getDateInTimezone(payload.timezone));
+			setTimezoneDraft(payload.timezone);
+			setTimezoneMessage("Timezone settings saved.");
+		} catch (err) {
+			setTimezoneMessage(err instanceof Error ? err.message : "Unable to save timezone");
+		} finally {
+			setTimezoneSaving(false);
+		}
+	}
+
+	// Keep every dashboard section in sync with the medication returned by the API.
+	function handleMedicationUpdated(updatedMed: ApiMed) {
+		setScheduledMeds((prev) =>
+			prev.map((med) => (med._id === updatedMed._id ? updatedMed : med))
+		);
+		setAllMeds((prev) =>
+			prev.map((med) => (med._id === updatedMed._id ? updatedMed : med))
+		);
+	}
 
 	// Create / Update / Delete handlers
 	async function handleSaveMed(med: { name: string; dose: string; time: string; days: string[] }) {
@@ -187,6 +306,16 @@ export default function Dashboard() {
 										Manage Medications
 									</button>
 									<button
+										onClick={() => {
+											setSettingsOpen(true);
+											setMenuOpen(false);
+											setTimezoneMessage("");
+										}}
+										className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+									>
+										Time Zone Settings
+									</button>
+									<button
 										onClick={signOut}
 										className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
 									>
@@ -209,14 +338,14 @@ export default function Dashboard() {
 								className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 animate-fadeIn"
 								style={{ animationDelay: "0ms" }}
 							>
-								<MiniCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+								<MiniCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} timezone={timezone} />
 							</div>
 							<div
 								className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 animate-fadeIn"
 								style={{ animationDelay: "300ms" }}
 							>
 								<h2 className="text-xl font-medium mb-4">Today&apos;s Medications</h2>
-								<MedList meds={scheduledMeds} date={selectedDate} />
+								<MedList meds={scheduledMeds} date={selectedDate} onMedicationUpdated={handleMedicationUpdated} />
 							</div>
 						</div>
 
@@ -233,7 +362,7 @@ export default function Dashboard() {
 								style={{ animationDelay: "700ms" }}
 							>
 								<h2 className="text-xl font-medium mb-4">Total Taken Counts</h2>
-								<TodayMedBarChart meds={scheduledMeds} />
+								<TodayMedBarChart meds={allMeds} />
 							</div>
 						</div>
 					</div>
@@ -255,6 +384,52 @@ export default function Dashboard() {
 					onSave={handleUpdateMed}
 					onDelete={handleDeleteMed}
 				/>
+				{settingsOpen && (
+					<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSettingsOpen(false)}>
+						<div className="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+							<div className="flex items-center justify-between mb-4">
+								<h2 className="text-xl font-semibold">Time Zone Settings</h2>
+								<button onClick={() => setSettingsOpen(false)} className="text-gray-500 hover:text-gray-800 dark:hover:text-white" aria-label="Close settings">✕</button>
+							</div>
+							<p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+								Medication reminders use this timezone to determine the scheduled day and time.
+							</p>
+							<label className="block text-sm font-medium mb-2" htmlFor="timezone-mode">Timezone behavior</label>
+							<select
+								id="timezone-mode"
+								value={timezoneMode}
+								onChange={(e) => setTimezoneMode(e.target.value as "auto" | "fixed")}
+								className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 p-2.5 mb-4"
+							>
+								<option value="auto">Automatic — follow my device's current timezone</option>
+								<option value="fixed">Fixed — always use a selected timezone</option>
+							</select>
+							{timezoneMode === "fixed" ? (
+								<>
+									<label className="block text-sm font-medium mb-2" htmlFor="fixed-timezone">IANA timezone</label>
+									<input
+										id="fixed-timezone"
+										value={timezoneDraft}
+										onChange={(e) => setTimezoneDraft(e.target.value)}
+										placeholder="America/New_York"
+										className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 p-2.5"
+									/>
+									<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Examples: America/New_York, Europe/London, Asia/Tokyo.</p>
+								</>
+							) : (
+								<p className="text-sm text-gray-600 dark:text-gray-300 mb-4">Detected timezone: <strong>{Intl.DateTimeFormat().resolvedOptions().timeZone}</strong></p>
+							)}
+							<p className="text-xs text-gray-500 dark:text-gray-400 mt-3">Active reminder timezone: <strong>{timezone}</strong></p>
+							{timezoneMessage && <p className="text-sm mt-3 text-gray-700 dark:text-gray-200">{timezoneMessage}</p>}
+							<div className="flex justify-end gap-3 mt-6">
+								<button onClick={() => setSettingsOpen(false)} className="rounded-lg px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Cancel</button>
+								<button onClick={saveTimezoneSettings} disabled={timezoneSaving} className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
+									{timezoneSaving ? "Saving..." : "Save settings"}
+								</button>
+							</div>
+						</div>
+					</div>
+				)}
 				<DeleteAccountModal open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} />
 			</main>
 		</>
