@@ -12,6 +12,19 @@ import EditMedModal from "./components/EditMedModal";
 import DeleteAccountModal from "./components/DeleteAccountModal";
 import TodayMedBarChart from "./components/TakenMedChart";
 import { Bars3Icon } from "@heroicons/react/24/outline";
+import { XMarkIcon } from "@heroicons/react/24/solid";
+
+const supportedTimezones = (() => {
+	const intl = Intl as typeof Intl & { supportedValuesOf?: (key: "timeZone") => string[] };
+	const zones = intl.supportedValuesOf?.("timeZone") ?? [
+		"Africa/Cairo", "America/Chicago", "America/Denver", "America/Los_Angeles",
+		"America/New_York", "America/Phoenix", "America/Toronto", "Asia/Dubai",
+		"Asia/Hong_Kong", "Asia/Kolkata", "Asia/Seoul", "Asia/Shanghai",
+		"Asia/Singapore", "Asia/Tokyo", "Australia/Sydney", "Europe/Berlin",
+		"Europe/London", "Europe/Paris", "Pacific/Auckland",
+	];
+	return Array.from(new Set(["UTC", ...zones])).sort((a, b) => a.localeCompare(b));
+})();
 
 function getDateInTimezone(timezone: string): Date {
 	const parts = new Intl.DateTimeFormat("en-US", {
@@ -386,45 +399,49 @@ export default function Dashboard() {
 				/>
 				{settingsOpen && (
 					<div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSettingsOpen(false)}>
-					<div className="absolute inset-0 bg-black bg-opacity-30 backdrop-blur-sm" />
-						<div className="relative w-full max-w-md rounded-xl bg-white dark:bg-gray-900 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-							<div className="flex items-center justify-between mb-4">
-								<h2 className="text-xl font-semibold">Time Zone Settings</h2>
-								<button onClick={() => setSettingsOpen(false)} className="text-gray-500 hover:text-gray-800 dark:hover:text-white" aria-label="Close settings">✕</button>
+						<div className="absolute inset-0 bg-black/15 backdrop-blur-[2px]" />
+						<div className="relative w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl bg-white dark:bg-gray-900 p-6 shadow-xl fade-in" onClick={(e) => e.stopPropagation()}>
+							<div className="flex justify-between items-center mb-4">
+								<h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Time Zone Settings</h2>
+								<button type="button" onClick={() => setSettingsOpen(false)} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md cursor-pointer" aria-label="Close settings">
+									<XMarkIcon className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+								</button>
 							</div>
-							<p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-								Medication reminders use this timezone to determine the scheduled day and time.
+							<p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 mb-5 break-words">
+								Medication reminders use this timezone to determine when scheduled doses are due.
 							</p>
-							<label className="block text-sm font-medium mb-2" htmlFor="timezone-mode">Timezone behavior</label>
+							<label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2" htmlFor="timezone-mode">Timezone behavior</label>
 							<select
 								id="timezone-mode"
 								value={timezoneMode}
 								onChange={(e) => setTimezoneMode(e.target.value as "auto" | "fixed")}
-								className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 p-2.5 mb-4"
+								className="w-full min-w-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2.5 mb-4 text-sm"
 							>
 								<option value="auto">Automatic — follow my device's current timezone</option>
 								<option value="fixed">Fixed — always use a selected timezone</option>
 							</select>
 							{timezoneMode === "fixed" ? (
-								<>
-									<label className="block text-sm font-medium mb-2" htmlFor="fixed-timezone">IANA timezone</label>
-									<input
+								<div className="min-w-0">
+									<label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2" htmlFor="fixed-timezone">Select timezone</label>
+									<select
 										id="fixed-timezone"
 										value={timezoneDraft}
 										onChange={(e) => setTimezoneDraft(e.target.value)}
-										placeholder="America/New_York"
-										className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 p-2.5"
-									/>
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Examples: America/New_York, Europe/London, Asia/Tokyo.</p>
-								</>
+										className="w-full min-w-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2.5 text-sm"
+									>
+										{!supportedTimezones.includes(timezoneDraft) && <option value={timezoneDraft}>{timezoneDraft}</option>}
+										{supportedTimezones.map((zone) => <option key={zone} value={zone}>{zone.replace(/_/g, " ")}</option>)}
+									</select>
+									<p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 mt-2 break-words">Choose the region and city that match the timezone you want reminders to follow.</p>
+								</div>
 							) : (
-								<p className="text-sm text-gray-600 dark:text-gray-300 mb-4">Detected timezone: <strong>{Intl.DateTimeFormat().resolvedOptions().timeZone}</strong></p>
+								<p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 mb-4 break-words">Detected timezone: <strong className="break-all">{Intl.DateTimeFormat().resolvedOptions().timeZone}</strong></p>
 							)}
-							<p className="text-xs text-gray-500 dark:text-gray-400 mt-3">Active reminder timezone: <strong>{timezone}</strong></p>
-							{timezoneMessage && <p className="text-sm mt-3 text-gray-700 dark:text-gray-200">{timezoneMessage}</p>}
-							<div className="flex justify-end gap-3 mt-6">
-								<button onClick={() => setSettingsOpen(false)} className="rounded-lg px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Cancel</button>
-								<button onClick={saveTimezoneSettings} disabled={timezoneSaving} className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
+							<p className="text-xs leading-relaxed text-gray-600 dark:text-gray-300 mt-4 break-words">Active reminder timezone: <strong className="break-all">{timezone}</strong></p>
+							{timezoneMessage && <p className="text-sm leading-relaxed mt-3 text-gray-700 dark:text-gray-200 break-words">{timezoneMessage}</p>}
+							<div className="flex flex-wrap justify-end gap-3 pt-4 mt-6 border-t border-gray-200 dark:border-gray-700">
+								<button type="button" onClick={() => setSettingsOpen(false)} className="cursor-pointer px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">Cancel</button>
+								<button type="button" onClick={saveTimezoneSettings} disabled={timezoneSaving} className="cursor-pointer px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
 									{timezoneSaving ? "Saving..." : "Save settings"}
 								</button>
 							</div>
