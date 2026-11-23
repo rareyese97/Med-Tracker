@@ -324,7 +324,7 @@ export default function Dashboard() {
 								className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 animate-fadeIn"
 								style={{ animationDelay: "0ms" }}
 							>
-								<MiniCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+								<MiniCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} timezone={timezone} />
 							</div>
 							<div
 								className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 animate-fadeIn"
