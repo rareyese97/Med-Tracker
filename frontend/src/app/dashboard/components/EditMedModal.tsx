@@ -220,7 +220,7 @@ export default function EditMedModal({ open, meds, onClose, onSave, onDelete }: 
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-			<div className="absolute inset-0 bg-black bg-opacity-30 backdrop-blur-sm" />
+			<div className="absolute inset-0 bg-black/15 backdrop-blur-[2px]" />
 			<div
 				ref={containerRef}
 				className="relative bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-2xl p-6 fade-in"
