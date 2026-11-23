@@ -2,7 +2,7 @@ import sgMail from "@sendgrid/mail";
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Shared Medicine Tracker email shell. The palette mirrors the app's stone
+// Shared Med-Tracker.app email shell. The palette mirrors the app's stone
 // background and slate dark-mode surfaces, with the app's green action color.
 function escapeHtml(value = "") {
 	return String(value).replace(/[&<>"']/g, (character) => {
@@ -47,7 +47,7 @@ function buildEmailHtml({ preheader, title, intro, contentHtml }) {
 					</tr>
 					<tr>
 						<td style="padding:18px 32px;background-color:#fafaf9;border-top:1px solid #e7e5e4;">
-							<p style="margin:0;font-size:12px;line-height:1.6;color:#57534e;">This is an automated message from Medicine Tracker. Please do not reply to this email.</p>
+							<p style="margin:0;font-size:12px;line-height:1.6;color:#57534e;">This is an automated message from Med-Tracker.app. Please do not reply to this email.</p>
 						</td>
 					</tr>
 				</table>
@@ -73,7 +73,7 @@ export async function sendOtpEmail(to, code, options = {}) {
 	const safeCode = escapeHtml(code);
 	const text =
 		options.text ||
-		`Welcome to Medicine Tracker!
+		`Welcome to Med-Tracker.app!
 
 Use the verification code below to confirm your email address:
 
@@ -81,13 +81,13 @@ ${code}
 
 This code expires in 10 minutes. For your security, do not share it with anyone.
 
-If you did not create a Medicine Tracker account, you can safely ignore this email.`;
+If you did not create a Med-Tracker.app account, you can safely ignore this email.`;
 	const html =
 		options.html ||
 		buildEmailHtml({
-			preheader: "Your Medicine Tracker verification code is inside.",
+			preheader: "Your Med-Tracker.app verification code is inside.",
 			title: "Verify your email address",
-			intro: "Thanks for creating a Medicine Tracker account. Enter this verification code in the app to confirm your email address:",
+			intro: "Thanks for creating a Med-Tracker.app account. Enter this verification code in the app to confirm your email address:",
 			contentHtml: `
 				<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;background-color:#f5f5f4;border:1px solid #e7e5e4;border-radius:10px;">
 					<tr><td align="center" style="padding:20px 12px;">
@@ -96,12 +96,12 @@ If you did not create a Medicine Tracker account, you can safely ignore this ema
 					</td></tr>
 				</table>
 				<p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#57534e;">This code expires in <strong>10 minutes</strong>. For your security, never share it with anyone.</p>
-				<p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#57534e;">If you didn't create a Medicine Tracker account, you can safely ignore this email.</p>`,
+				<p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#57534e;">If you didn't create a Med-Tracker.app account, you can safely ignore this email.</p>`,
 		});
 
 	await sendEmail({
 		to,
-		subject: options.subject || "Verify your email | Medicine Tracker",
+		subject: options.subject || "Verify your email | Med-Tracker.app",
 		text,
 		html,
 	});
@@ -109,16 +109,16 @@ If you did not create a Medicine Tracker account, you can safely ignore this ema
 
 export async function sendResetEmail(to, resetLink) {
 	const safeLink = escapeHtml(resetLink);
-	const text = `We received a request to reset your Medicine Tracker password.
+	const text = `We received a request to reset your Med-Tracker.app password.
 
 Use this link to choose a new password:
 ${resetLink}
 
 This link expires in 1 hour. If you did not request a password reset, you can safely ignore this email.`;
 	const html = buildEmailHtml({
-		preheader: "Use the secure link to reset your Medicine Tracker password.",
+		preheader: "Use the secure link to reset your Med-Tracker.app password.",
 		title: "Reset your password",
-		intro: "We received a request to reset the password for your Medicine Tracker account. Use the button below to choose a new password.",
+		intro: "We received a request to reset the password for your Med-Tracker.app account. Use the button below to choose a new password.",
 		contentHtml: `
 			<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;">
 				<tr><td align="center" bgcolor="#16a34a" style="border-radius:999px;">
@@ -131,7 +131,7 @@ This link expires in 1 hour. If you did not request a password reset, you can sa
 			<p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#57534e;">If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>`,
 	});
 
-	await sendEmail({ to, subject: "Reset your password | Medicine Tracker", text, html });
+	await sendEmail({ to, subject: "Reset your password | Med-Tracker.app", text, html });
 }
 
 export async function sendMedicationReminderEmail(to, { firstName, medName, time, date }) {
@@ -143,7 +143,7 @@ It's ${time} on ${date} — time for your ${medName}.
 
 If you've already taken this medication, you can disregard this reminder.
 
-— Medicine Tracker`;
+— Med-Tracker.app`;
 	const html = buildEmailHtml({
 		preheader: `Medication reminder: it's time for ${medName}.`,
 		title: "Medication reminder",
