@@ -7,6 +7,7 @@ import Med from "../models/Meds.js";
 import { generateOtp } from "../utils/otp.js";
 import { sendOtpEmail, sendResetEmail } from "../utils/email.js";
 import crypto from "crypto";
+import authMiddleware from "../middleware/auth.js";
 
 const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL;
@@ -196,6 +197,48 @@ router.post("/reset-password", async (req, res) => {
 	} catch (err) {
 		console.error(err);
 		res.status(500).json({ message: err.message });
+	}
+});
+
+
+// ─── CURRENT USER & TIMEZONE PREFERENCES ──────────────────────────────────────
+router.get("/me", authMiddleware, async (req, res) => {
+	try {
+		const user = await User.findById(req.user.id).select("firstName email timezone timezoneMode");
+		if (!user) return res.status(404).json({ message: "User not found" });
+		res.json({
+			firstName: user.firstName,
+			email: user.email,
+			timezone: user.timezone || "America/New_York",
+			timezoneMode: user.timezoneMode || "auto",
+		});
+	} catch (err) {
+		console.error("Get profile error:", err);
+		res.status(500).json({ message: "Unable to load account settings" });
+	}
+});
+
+router.put("/timezone", authMiddleware, async (req, res) => {
+	const { timezone, mode } = req.body;
+	if (!["auto", "fixed"].includes(mode) || typeof timezone !== "string" || !timezone.trim()) {
+		return res.status(400).json({ message: "A valid timezone and mode are required" });
+	}
+	try {
+		// Validate IANA timezone identifiers before saving them.
+		new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+		const user = await User.findByIdAndUpdate(
+			req.user.id,
+			{ timezone, timezoneMode: mode },
+			{ new: true, runValidators: true }
+		).select("timezone timezoneMode");
+		if (!user) return res.status(404).json({ message: "User not found" });
+		res.json({ timezone: user.timezone, timezoneMode: user.timezoneMode });
+	} catch (err) {
+		if (err instanceof RangeError) {
+			return res.status(400).json({ message: "Please enter a valid IANA timezone, such as America/New_York." });
+		}
+		console.error("Update timezone error:", err);
+		res.status(500).json({ message: "Unable to update timezone settings" });
 	}
 });
 
